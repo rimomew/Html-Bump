@@ -75,7 +75,10 @@
 <div id="header">
   <div>
     <div style="font-family:'Syne',sans-serif;font-size:17px;font-weight:800;color:#fff;letter-spacing:-0.03em;line-height:1">SCRAPER</div>
-    <div style="font-size:8px;color:#1e3a5a;letter-spacing:0.22em;margin-top:2px">ROMÂNIA EXPLORER</div>
+    <div style="font-size:8px;color:#1e3a5a;letter-spacing:0.22em;margin-top:2px;display:flex;align-items:center;gap:5px">
+      ROMÂNIA EXPLORER
+      <span id="online-dot" title="Online" style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#00ff8c;flex-shrink:0"></span>
+    </div>
   </div>
   <div style="display:flex;align-items:center;gap:10px">
     <div style="text-align:right">
@@ -101,6 +104,9 @@
   <button class="btn style-btn"    data-style="sat">Sat</button>
   <button class="btn style-btn"    data-style="topo">Topo</button>
   <button class="btn" id="btn-reset" style="margin-left:auto;background:#1a0808;color:#ff7070;border:1px solid #3a1010;font-size:9px;padding:4px 8px">⟳ Reset</button>
+  <button class="btn" id="btn-export" style="background:#0d1a28;color:#4a7aaa;border:1px solid #1a3050;font-size:9px;padding:4px 8px">↑ Export</button>
+  <button class="btn" id="btn-import" style="background:#0d1a28;color:#4a7aaa;border:1px solid #1a3050;font-size:9px;padding:4px 8px">↓ Import</button>
+  <input type="file" id="import-input" accept=".json" style="display:none" />
 </div>
 
 <div id="error-bar">
@@ -219,7 +225,7 @@ const STYLES = {
   topo:  { url:"https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png",                                              attr:"© OpenTopoMap"                },
 };
 const FOG_ALPHA = 0.82;
-const REVEAL_R  = 1;
+const REVEAL_R  = 2;
 
 // ── Geo helpers ──────────────────────────────────────────────────────────
 function regionOrigin(r) {
@@ -406,13 +412,67 @@ function showError(msg){
 }
 function closeError(){ document.getElementById("error-bar").style.display="none"; }
 
-document.getElementById("btn-reset").addEventListener("click",()=>{
+document.getElementById("btn-export").addEventListener("click", () => {
+  const data = {};
+  REGIONS.forEach(r => { data[r.id] = [...exploredMap[r.id]]; });
+  const blob = new Blob([JSON.stringify(data)], { type:"application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `scraper-romania-${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+});
+
+document.getElementById("btn-import").addEventListener("click", () => {
+  document.getElementById("import-input").click();
+});
+document.getElementById("import-input").addEventListener("change", e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      const data = JSON.parse(ev.target.result);
+      REGIONS.forEach(r => {
+        if (data[r.id]) {
+          // Merge — don't overwrite, combine both phones' progress
+          data[r.id].forEach(tile => exploredMap[r.id].add(tile));
+        }
+      });
+      saveProgress();
+      updateAll(); redrawFog();
+      showError("✓ Import successful — progress merged!");
+    } catch {
+      showError("Import failed — invalid file.");
+    }
+    e.target.value = "";
+  };
+  reader.readAsText(file);
+});
+
   if(confirm("Reset all progress? This cannot be undone.")) clearProgress();
 });
 
 loadProgress();
 redrawFog(); updateAll();
 window.addEventListener("resize",redrawFog);
+
+// ── Service Worker (offline) ──────────────────────────────────────────────
+if("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("sw.js").catch(()=>{});
+}
+// Offline indicator
+function updateOnlineStatus() {
+  const dot = document.getElementById("online-dot");
+  if (!dot) return;
+  if (navigator.onLine) {
+    dot.title = "Online"; dot.style.background = "#00ff8c";
+  } else {
+    dot.title = "Offline — using cached tiles"; dot.style.background = "#ffaa00";
+  }
+}
+window.addEventListener("online",  updateOnlineStatus);
+window.addEventListener("offline", updateOnlineStatus);
+updateOnlineStatus();
 </script>
 </body>
 </html>
