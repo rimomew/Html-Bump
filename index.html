@@ -224,8 +224,15 @@ const STYLES = {
   sat:   { url:"https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", attr:"© Esri"                       },
   topo:  { url:"https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png",                                              attr:"© OpenTopoMap"                },
 };
-const FOG_ALPHA = 0.82;
-const REVEAL_R  = 5;
+const FOG_ALPHA   = 0.82;
+const REVEAL_MIN  = 2;   // walking / standing
+const REVEAL_MAX  = 12;  // highway speed (~108km/h)
+function speedToRadius(mps) {
+  if (!mps || mps < 1) return REVEAL_MIN;
+  if (mps > 30) return REVEAL_MAX;
+  return Math.round(REVEAL_MIN + (REVEAL_MAX - REVEAL_MIN) * (mps / 30));
+}
+let currentRevealR = REVEAL_MIN;
 
 // ── Geo helpers ──────────────────────────────────────────────────────────
 function regionOrigin(r) {
@@ -245,13 +252,14 @@ function regionsAt(lat, lng) {
 }
 
 // ── Reveal ───────────────────────────────────────────────────────────────
-function revealAt(lat, lng) {
+function revealAt(lat, lng, radius) {
+  const r2 = radius ?? currentRevealR;
   const affected = regionsAt(lat, lng);
   affected.forEach(r => {
     const {tx,ty} = latLngToTile(r,lat,lng);
-    for(let dx=-REVEAL_R;dx<=REVEAL_R;dx++)
-      for(let dy=-REVEAL_R;dy<=REVEAL_R;dy++)
-        if(dx*dx+dy*dy<=REVEAL_R*REVEAL_R) {
+    for(let dx=-r2;dx<=r2;dx++)
+      for(let dy=-r2;dy<=r2;dy++)
+        if(dx*dx+dy*dy<=r2*r2) {
           const nx=tx+dx, ny=ty+dy;
           if(inBounds(r,nx,ny)) exploredMap[r.id].add(`${nx},${ny}`);
         }
@@ -285,4 +293,196 @@ function redrawFog() {
   ctx.globalCompositeOperation="destination-out";
   REGIONS.forEach(r=>{
     exploredMap[r.id].forEach(key=>{
-      const [tx,ty]
+      const [tx,ty]=key.split(",").map(Number);
+      const [lat,lng]=tileCenter(r,tx,ty);
+      const pt=map.latLngToContainerPoint([lat,lng]);
+      const pt2=map.latLngToContainerPoint([lat+r.tileDeg,lng]);
+      const rad=Math.abs(pt2.y-pt.y)*1.45+4;
+      const grd=ctx.createRadialGradient(pt.x,pt.y,0,pt.x,pt.y,rad);
+      grd.addColorStop(0,"rgba(0,0,0,1)");
+      grd.addColorStop(0.55,"rgba(0,0,0,0.92)");
+      grd.addColorStop(1,"rgba(0,0,0,0)");
+      ctx.fillStyle=grd;
+      ctx.beginPath(); ctx.arc(pt.x,pt.y,rad,0,Math.PI*2); ctx.fill();
+    });
+  });
+  ctx.globalCompositeOperation="source-over";
+  if(playerPos){
+    const pt=map.latLngToContainerPoint([playerPos.lat,playerPos.lng]);
+    ctx.beginPath();ctx.arc(pt.x,pt.y,20,0,Math.PI*2);ctx.fillStyle="rgba(0,255,140,0.07)";ctx.fill();
+    ctx.beginPath();ctx.arc(pt.x,pt.y,11,0,Math.PI*2);ctx.fillStyle="rgba(0,255,140,0.17)";ctx.fill();
+    ctx.beginPath();ctx.arc(pt.x,pt.y,5.5,0,Math.PI*2);ctx.fillStyle="#00ff8c";
+    ctx.shadowColor="#00ff8c";ctx.shadowBlur=14;ctx.fill();ctx.shadowBlur=0;
+    ctx.beginPath();ctx.arc(pt.x,pt.y,7,0,Math.PI*2);
+    ctx.strokeStyle="rgba(0,255,140,0.5)";ctx.lineWidth=1.5;ctx.stroke();
+  }
+}
+
+// ── Stats ─────────────────────────────────────────────────────────────────
+function regionPct(r){ return exploredMap[r.id].size/(r.gridW*r.gridH)*100; }
+function updateAll(){
+  const totTiles=REGIONS.reduce((s,r)=>s+r.gridW*r.gridH,0);
+  const expSum=REGIONS.reduce((s,r)=>s+exploredMap[r.id].size,0);
+  document.getElementById("pct-total").textContent=(expSum/totTiles*100).toFixed(2)+"%";
+  const done=REGIONS.filter(r=>regionPct(r)>=100).length;
+  document.getElementById("regions-done").textContent=`${done}/${REGIONS.length}`;
+  REGIONS.forEach(r=>{
+    const pct=regionPct(r);
+    const item=document.getElementById("ri-"+r.id);
+    if(!item)return;
+    item.querySelector(".region-pct").textContent=pct.toFixed(1)+"%";
+    item.querySelector(".region-bar").style.width=Math.min(pct,100)+"%";
+    item.classList.toggle("done",pct>=100);
+  });
+  updateHud();
+}
+function updateHud(){
+  const hud=document.getElementById("region-hud");
+  if(!activeRegion){hud.style.display="none";return;}
+  const r=activeRegion, pct=regionPct(r);
+  hud.style.display="block";
+  document.getElementById("hud-name").textContent=r.name;
+  document.getElementById("hud-pct").textContent=pct.toFixed(2)+"%";
+  document.getElementById("hud-tiles").textContent=`${exploredMap[r.id].size} / ${r.gridW*r.gridH} TILES`;
+}
+function setActiveRegion(r){
+  activeRegion=r;
+  document.querySelectorAll(".region-item").forEach(el=>el.classList.remove("active"));
+  if(r){const el=document.getElementById("ri-"+r.id);if(el)el.classList.add("active");}
+  updateHud();
+}
+
+// ── Sidebar ───────────────────────────────────────────────────────────────
+const listEl=document.getElementById("region-list");
+REGIONS.forEach(r=>{
+  const item=document.createElement("div");
+  item.className="region-item"; item.id="ri-"+r.id;
+  item.innerHTML=`<div class="region-name"><span>${r.name}</span><span class="rtype">${r.type}</span></div><div class="region-pct">0.0%</div><div class="region-bar-bg"><div class="region-bar"></div></div>`;
+  item.addEventListener("click",()=>{
+    map.flyTo(r.center,r.zoom,{duration:1.0});
+    setActiveRegion(r);
+    document.getElementById("sidebar").classList.remove("open");
+  });
+  listEl.appendChild(item);
+});
+
+// ── Buttons ───────────────────────────────────────────────────────────────
+document.getElementById("btn-locate").addEventListener("click",()=>{
+  const btn=document.getElementById("btn-locate");
+  btn.disabled=true; btn.innerHTML='<span class="spin">⌖</span> …';
+  navigator.geolocation.getCurrentPosition(
+    ({coords:{latitude:lat,longitude:lng}})=>{
+      playerPos={lat,lng}; revealAt(lat,lng);
+      map.flyTo([lat,lng],activeRegion?activeRegion.zoom:14,{duration:1.2});
+      updateAll(); redrawFog();
+      btn.disabled=false; btn.innerHTML="⌖ Locate";
+    },
+    ()=>{ showError("GPS unavailable — tap the map to explore."); btn.disabled=false; btn.innerHTML="⌖ Locate"; },
+    {enableHighAccuracy:true,timeout:8000}
+  );
+});
+document.getElementById("btn-track").addEventListener("click",()=>{
+  const btn=document.getElementById("btn-track");
+  if(!tracking){
+    if(!navigator.geolocation){showError("Geolocation not supported.");return;}
+    watchId=navigator.geolocation.watchPosition(
+      ({coords:{latitude:lat,longitude:lng,speed}})=>{
+        currentRevealR = speedToRadius(speed);
+        playerPos={lat,lng}; revealAt(lat,lng);
+        map.panTo([lat,lng],{animate:true,duration:0.5});
+        updateAll(); redrawFog();
+      },
+      ()=>showError("GPS signal lost."),
+      {enableHighAccuracy:true,maximumAge:1000}
+    );
+    tracking=true; btn.textContent="⊙ Tracking…"; btn.classList.add("on");
+  } else {
+    navigator.geolocation.clearWatch(watchId);
+    tracking=false; btn.textContent="⊙ Track"; btn.classList.remove("on");
+  }
+});
+document.querySelectorAll(".style-btn").forEach(btn=>{
+  btn.addEventListener("click",()=>{
+    document.querySelectorAll(".style-btn").forEach(b=>b.classList.remove("on"));
+    btn.classList.add("on");
+    const s=STYLES[btn.dataset.style];
+    tileLayer.remove();
+    tileLayer=L.tileLayer(s.url,{attribution:s.attr,maxZoom:19}).addTo(map);
+    tileLayer.setZIndex(1);
+  });
+});
+document.getElementById("btn-sidebar").addEventListener("click",()=>{
+  document.getElementById("sidebar").classList.toggle("open");
+});
+function showError(msg){
+  document.getElementById("error-msg").textContent=msg;
+  const bar=document.getElementById("error-bar");
+  bar.style.display="flex"; bar.classList.add("fi");
+}
+function closeError(){ document.getElementById("error-bar").style.display="none"; }
+
+document.getElementById("btn-export").addEventListener("click", () => {
+  const data = {};
+  REGIONS.forEach(r => { data[r.id] = [...exploredMap[r.id]]; });
+  const blob = new Blob([JSON.stringify(data)], { type:"application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `scraper-romania-${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+});
+
+document.getElementById("btn-import").addEventListener("click", () => {
+  document.getElementById("import-input").click();
+});
+document.getElementById("import-input").addEventListener("change", e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      const data = JSON.parse(ev.target.result);
+      REGIONS.forEach(r => {
+        if (data[r.id]) {
+          // Merge — don't overwrite, combine both phones' progress
+          data[r.id].forEach(tile => exploredMap[r.id].add(tile));
+        }
+      });
+      saveProgress();
+      updateAll(); redrawFog();
+      showError("✓ Import successful — progress merged!");
+    } catch {
+      showError("Import failed — invalid file.");
+    }
+    e.target.value = "";
+  };
+  reader.readAsText(file);
+});
+
+document.getElementById("btn-reset").addEventListener("click",()=>{
+  if(confirm("Reset all progress? This cannot be undone.")) clearProgress();
+});
+
+loadProgress();
+redrawFog(); updateAll();
+window.addEventListener("resize",redrawFog);
+
+// ── Service Worker (offline) ──────────────────────────────────────────────
+if("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("sw.js").catch(()=>{});
+}
+// Offline indicator
+function updateOnlineStatus() {
+  const dot = document.getElementById("online-dot");
+  if (!dot) return;
+  if (navigator.onLine) {
+    dot.title = "Online"; dot.style.background = "#00ff8c";
+  } else {
+    dot.title = "Offline — using cached tiles"; dot.style.background = "#ffaa00";
+  }
+}
+window.addEventListener("online",  updateOnlineStatus);
+window.addEventListener("offline", updateOnlineStatus);
+updateOnlineStatus();
+</script>
+</body>
+</html>
