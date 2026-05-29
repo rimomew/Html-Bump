@@ -278,15 +278,8 @@ const STYLES = {
   sat:   { url:"https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", attr:"© Esri"                       },
   topo:  { url:"https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png",                                              attr:"© OpenTopoMap"                },
 };
-const FOG_ALPHA   = 0.82;
-const REVEAL_MIN  = 2;   // walking / standing
-const REVEAL_MAX  = 12;  // highway speed (~108km/h)
-function speedToRadius(mps) {
-  if (!mps || mps < 1) return REVEAL_MIN;
-  if (mps > 30) return REVEAL_MAX;
-  return Math.round(REVEAL_MIN + (REVEAL_MAX - REVEAL_MIN) * (mps / 30));
-}
-let currentRevealR = REVEAL_MIN;
+const FOG_ALPHA = 0.82;
+const REVEAL_R  = 3;
 
 // ── Geo helpers ──────────────────────────────────────────────────────────
 function regionOrigin(r) {
@@ -306,14 +299,13 @@ function regionsAt(lat, lng) {
 }
 
 // ── Reveal ───────────────────────────────────────────────────────────────
-function revealAt(lat, lng, radius) {
-  const r2 = radius ?? currentRevealR;
+function revealAt(lat, lng) {
   const affected = regionsAt(lat, lng);
   affected.forEach(r => {
     const {tx,ty} = latLngToTile(r,lat,lng);
-    for(let dx=-r2;dx<=r2;dx++)
-      for(let dy=-r2;dy<=r2;dy++)
-        if(dx*dx+dy*dy<=r2*r2) {
+    for(let dx=-REVEAL_R;dx<=REVEAL_R;dx++)
+      for(let dy=-REVEAL_R;dy<=REVEAL_R;dy++)
+        if(dx*dx+dy*dy<=REVEAL_R*REVEAL_R) {
           const nx=tx+dx, ny=ty+dy;
           if(inBounds(r,nx,ny)) exploredMap[r.id].add(`${nx},${ny}`);
         }
@@ -401,24 +393,51 @@ function updateHud(){
 }
 function setActiveRegion(r){
   activeRegion=r;
-  document.querySelectorAll(".region-item").forEach(el=>el.classList.remove("active"));
-  if(r){const el=document.getElementById("ri-"+r.id);if(el)el.classList.add("active");}
+  buildSidebar(r);
   updateHud();
 }
 
 // ── Sidebar ───────────────────────────────────────────────────────────────
 const listEl=document.getElementById("region-list");
-REGIONS.forEach(r=>{
-  const item=document.createElement("div");
-  item.className="region-item"; item.id="ri-"+r.id;
-  item.innerHTML=`<div class="region-name"><span>${r.name}</span><span class="rtype">${r.type}</span></div><div class="region-pct">0.0%</div><div class="region-bar-bg"><div class="region-bar"></div></div>`;
-  item.addEventListener("click",()=>{
-    map.flyTo(r.center,r.zoom,{duration:1.0});
-    setActiveRegion(r);
-    document.getElementById("sidebar").classList.remove("open");
+function buildSidebar(currentRegion) {
+  listEl.innerHTML = "";
+  const sorted = [...REGIONS].sort((a,b) => {
+    const aActive = currentRegion && a.id === currentRegion.id ? 0 : 1;
+    const bActive = currentRegion && b.id === currentRegion.id ? 0 : 1;
+    if (aActive !== bActive) return aActive - bActive;
+    return a.name.localeCompare(b.name, "ro");
   });
-  listEl.appendChild(item);
-});
+  sorted.forEach(r => {
+    const item=document.createElement("div");
+    item.className="region-item"; item.id="ri-"+r.id;
+    if (currentRegion && r.id === currentRegion.id) item.classList.add("active");
+    item.innerHTML=`
+      <div class="region-name">
+        <span>${r.name}</span>
+        <span style="display:flex;align-items:center;gap:5px">
+          <span class="rtype">${r.type}</span>
+          <button class="del-btn" title="Clear region" style="background:none;border:none;color:#3a1010;cursor:pointer;font-size:11px;padding:0 2px;line-height:1">🗑</button>
+        </span>
+      </div>
+      <div class="region-pct">0.0%</div>
+      <div class="region-bar-bg"><div class="region-bar"></div></div>`;
+    item.querySelector(".del-btn").addEventListener("click", e => {
+      e.stopPropagation();
+      if(confirm(`Clear "${r.name}"?`)) {
+        exploredMap[r.id] = new Set();
+        saveProgress();
+        updateAll(); redrawFog();
+      }
+    });
+    item.addEventListener("click",()=>{
+      map.flyTo(r.center,r.zoom,{duration:1.0});
+      setActiveRegion(r);
+      document.getElementById("sidebar").classList.remove("open");
+    });
+    listEl.appendChild(item);
+  });
+}
+buildSidebar(null);
 
 // ── Buttons ───────────────────────────────────────────────────────────────
 document.getElementById("btn-locate").addEventListener("click",()=>{
@@ -440,8 +459,7 @@ document.getElementById("btn-track").addEventListener("click",()=>{
   if(!tracking){
     if(!navigator.geolocation){showError("Geolocation not supported.");return;}
     watchId=navigator.geolocation.watchPosition(
-      ({coords:{latitude:lat,longitude:lng,speed}})=>{
-        currentRevealR = speedToRadius(speed);
+      ({coords:{latitude:lat,longitude:lng}})=>{
         playerPos={lat,lng}; revealAt(lat,lng);
         map.panTo([lat,lng],{animate:true,duration:0.5});
         updateAll(); redrawFog();
