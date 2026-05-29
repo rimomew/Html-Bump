@@ -449,6 +449,7 @@ document.getElementById("import-input").addEventListener("change", e => {
   reader.readAsText(file);
 });
 
+document.getElementById("btn-reset").addEventListener("click",()=>{
   if(confirm("Reset all progress? This cannot be undone.")) clearProgress();
 });
 
