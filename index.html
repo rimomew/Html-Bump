@@ -219,7 +219,7 @@ const STYLES = {
   topo:  { url:"https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png",                                              attr:"© OpenTopoMap"                },
 };
 const FOG_ALPHA = 0.82;
-const REVEAL_R  = 1;
+const REVEAL_R  = 2;
 
 // ── Geo helpers ──────────────────────────────────────────────────────────
 function regionOrigin(r) {
@@ -265,11 +265,7 @@ const map = L.map("map",{center:[45.9432,24.9668],zoom:7,zoomControl:false});
 L.control.zoom({position:"bottomright"}).addTo(map);
 tileLayer = L.tileLayer(STYLES.street.url,{attribution:STYLES.street.attr,maxZoom:19}).addTo(map);
 
-map.on("click",e=>{
-  playerPos={lat:e.latlng.lat,lng:e.latlng.lng};
-  revealAt(e.latlng.lat,e.latlng.lng);
-  updateAll(); redrawFog();
-});
+
 map.on("move zoom resize moveend zoomend",redrawFog);
 
 // ── Fog ──────────────────────────────────────────────────────────────────
@@ -420,4 +416,3 @@ window.addEventListener("resize",redrawFog);
 </script>
 </body>
 </html>
-
