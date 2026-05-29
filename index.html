@@ -100,6 +100,7 @@
   <button class="btn style-btn"    data-style="dark">Dark</button>
   <button class="btn style-btn"    data-style="sat">Sat</button>
   <button class="btn style-btn"    data-style="topo">Topo</button>
+  <button class="btn" id="btn-reset" style="margin-left:auto;background:#1a0808;color:#ff7070;border:1px solid #3a1010;font-size:9px;padding:4px 8px">⟳ Reset</button>
 </div>
 
 <div id="error-bar">
@@ -178,6 +179,30 @@ const REGIONS = [
   { id:"histria",     name:"Histria",             type:"UNESCO",   center:[44.5488,28.7761], zoom:13, tileDeg:0.003,  gridW:30, gridH:25 },
 ];
 
+// ── Persistence ──────────────────────────────────────────────────────────
+const SAVE_KEY = "scraper_romania_v1";
+function saveProgress() {
+  const data = {};
+  REGIONS.forEach(r => { data[r.id] = [...exploredMap[r.id]]; });
+  try { localStorage.setItem(SAVE_KEY, JSON.stringify(data)); } catch(e) {}
+}
+function loadProgress() {
+  try {
+    const raw = localStorage.getItem(SAVE_KEY);
+    if (!raw) return;
+    const data = JSON.parse(raw);
+    REGIONS.forEach(r => {
+      if (data[r.id]) exploredMap[r.id] = new Set(data[r.id]);
+    });
+  } catch(e) {}
+}
+function clearProgress() {
+  REGIONS.forEach(r => { exploredMap[r.id] = new Set(); });
+  try { localStorage.removeItem(SAVE_KEY); } catch(e) {}
+  playerPos = null;
+  updateAll(); redrawFog();
+}
+
 const exploredMap = {};
 REGIONS.forEach(r => { exploredMap[r.id] = new Set(); });
 
@@ -232,6 +257,7 @@ function revealAt(lat, lng) {
     },null);
     setActiveRegion(closest);
   }
+  saveProgress();
 }
 
 // ── Map ──────────────────────────────────────────────────────────────────
@@ -384,8 +410,14 @@ function showError(msg){
 }
 function closeError(){ document.getElementById("error-bar").style.display="none"; }
 
+document.getElementById("btn-reset").addEventListener("click",()=>{
+  if(confirm("Reset all progress? This cannot be undone.")) clearProgress();
+});
+
+loadProgress();
 redrawFog(); updateAll();
 window.addEventListener("resize",redrawFog);
 </script>
 </body>
 </html>
+
