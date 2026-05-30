@@ -7,6 +7,8 @@
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <title>SCRAPER · România</title>
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#06090e" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@800&display=swap" rel="stylesheet" />
@@ -547,21 +549,6 @@ function redrawFog() {
   });
 
   ctx.globalCompositeOperation="source-over";
-
-  // Colored fog tint per type on explored areas
-  REGIONS.forEach(r=>{
-    if(!exploredMap[r.id].size) return;
-    const color = FOG_COLORS[r.type] || "rgba(6,9,20,";
-    exploredMap[r.id].forEach(key=>{
-      const [tx,ty]=key.split(",").map(Number);
-      const [lat,lng]=tileCenter(r,tx,ty);
-      const pt=map.latLngToContainerPoint([lat,lng]);
-      const pt2=map.latLngToContainerPoint([lat+r.tileDeg,lng]);
-      const rad=Math.abs(pt2.y-pt.y)*0.7;
-      ctx.fillStyle=color+"0.08)";
-      ctx.beginPath(); ctx.arc(pt.x,pt.y,rad,0,Math.PI*2); ctx.fill();
-    });
-  });
 
   // Player dot
   if(playerPos){
