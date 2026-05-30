@@ -437,14 +437,15 @@ function clearProgress() {
 const exploredMap = {};
 REGIONS.forEach(r => { exploredMap[r.id] = new Set(); });
 
-let activeRegion = null;
-let playerPos    = null;
-let tracking     = false;
-let watchId      = null;
-let tileLayer    = null;
-let rotateMode   = false;
-let currentSpeed = 0;
-let batterySaver = false;
+let activeRegion  = null;
+let playerPos     = null;
+let lastPlayerPos = null;   // for movement interpolation
+let tracking      = false;
+let watchId       = null;
+let tileLayer     = null;
+let rotateMode    = false;
+let currentSpeed  = 0;
+let batterySaver  = false;
 
 const STYLES = {
   street:{ url:"https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",                                            attr:"© OpenStreetMap contributors" },
@@ -496,6 +497,16 @@ function revealAt(lat, lng) {
   }
   saveProgress();
   checkAchievements();
+}
+
+// Fill tiles between two GPS positions to avoid broken trails on fast movement
+function revealLine(lat1, lng1, lat2, lng2) {
+  const dist = Math.hypot(lat2-lat1, lng2-lng1);
+  const steps = Math.max(1, Math.ceil(dist / 0.0008));
+  for (let i=0; i<=steps; i++) {
+    const t = i/steps;
+    revealAt(lat1 + (lat2-lat1)*t, lng1 + (lng2-lng1)*t);
+  }
 }
 
 // ═══════════════════════════════════════════════════════
@@ -777,7 +788,7 @@ document.getElementById("btn-locate").addEventListener("click",()=>{
   btn.disabled=true; btn.innerHTML='<span class="spin">⌖</span> …';
   navigator.geolocation.getCurrentPosition(
     ({coords:{latitude:lat,longitude:lng,speed}})=>{
-      playerPos={lat,lng}; revealAt(lat,lng);
+      playerPos={lat,lng}; lastPlayerPos=null; revealAt(lat,lng);
       updateSpeed(speed);
       map.flyTo([lat,lng],activeRegion?activeRegion.zoom:14,{duration:1.2});
       updateAll(); redrawFog();
@@ -801,13 +812,15 @@ document.getElementById("btn-track").addEventListener("click",()=>{
     if(!navigator.geolocation){showError("Geolocation not supported.");return;}
     watchId=navigator.geolocation.watchPosition(
       ({coords:{latitude:lat,longitude:lng,speed}})=>{
-        playerPos={lat,lng}; revealAt(lat,lng);
+        if(lastPlayerPos) revealLine(lastPlayerPos.lat,lastPlayerPos.lng,lat,lng);
+        else revealAt(lat,lng);
+        lastPlayerPos={lat,lng}; playerPos={lat,lng};
         updateSpeed(speed);
         map.panTo([lat,lng],{animate:true,duration:0.5});
         updateAll(); redrawFog(); drawMinimap();
       },
       ()=>showError("GPS signal lost."),
-      {enableHighAccuracy:!batterySaver, maximumAge:batterySaver?10000:1000}
+      {enableHighAccuracy:!batterySaver, maximumAge:batterySaver?10000:0, timeout:10000}
     );
     requestWakeLock();
     tracking=true; btn.textContent="⊙ Tracking…"; btn.classList.add("on");
@@ -815,7 +828,7 @@ document.getElementById("btn-track").addEventListener("click",()=>{
   } else {
     navigator.geolocation.clearWatch(watchId);
     releaseWakeLock();
-    tracking=false; btn.textContent="⊙ Track"; btn.classList.remove("on");
+    lastPlayerPos=null; tracking=false; btn.textContent="⊙ Track"; btn.classList.remove("on");
     document.getElementById("speed-hud").style.display="none";
   }
 });
@@ -850,13 +863,15 @@ document.getElementById("btn-battery").addEventListener("click",()=>{
     navigator.geolocation.clearWatch(watchId);
     watchId=navigator.geolocation.watchPosition(
       ({coords:{latitude:lat,longitude:lng,speed}})=>{
-        playerPos={lat,lng}; revealAt(lat,lng);
+        if(lastPlayerPos) revealLine(lastPlayerPos.lat,lastPlayerPos.lng,lat,lng);
+        else revealAt(lat,lng);
+        lastPlayerPos={lat,lng}; playerPos={lat,lng};
         updateSpeed(speed);
         map.panTo([lat,lng],{animate:true,duration:0.5});
         updateAll(); redrawFog(); drawMinimap();
       },
       ()=>showError("GPS signal lost."),
-      {enableHighAccuracy:!batterySaver, maximumAge:batterySaver?10000:1000}
+      {enableHighAccuracy:!batterySaver, maximumAge:batterySaver?10000:0, timeout:10000}
     );
   }
 });
