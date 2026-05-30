@@ -69,9 +69,16 @@
     .rh-tiles { font-size:8px; color:#1e3a5a; }
 
     /* Speed HUD */
-    #speed-hud { position:absolute; bottom:60px; right:10px; z-index:500; background:rgba(6,9,20,0.9); border:1px solid #0d2030; border-radius:5px; padding:5px 10px; text-align:center; display:none; pointer-events:none; min-width:60px; }
+    #speed-hud { position:absolute; bottom:105px; right:10px; z-index:500; background:rgba(6,9,20,0.9); border:1px solid #0d2030; border-radius:5px; padding:5px 10px; text-align:center; display:none; pointer-events:none; min-width:60px; }
     #speed-val { font-size:22px; font-weight:700; color:#00ff8c; line-height:1; }
     #speed-unit { font-size:8px; color:#1e3a5a; letter-spacing:0.1em; }
+
+    /* KM Counter */
+    #km-hud { position:absolute; bottom:10px; right:10px; z-index:500; background:rgba(6,9,20,0.9); border:1px solid #0d2030; border-radius:5px; padding:5px 10px; text-align:center; pointer-events:none; min-width:60px; }
+    #km-val { font-size:22px; font-weight:700; color:#4ac8ff; line-height:1; }
+    #km-unit { font-size:8px; color:#1e3a5a; letter-spacing:0.1em; }
+    #km-reset { font-size:7px; color:#1e3a5a; margin-top:3px; cursor:pointer; pointer-events:all; letter-spacing:0.08em; text-transform:uppercase; }
+    #km-reset:hover { color:#4ac8ff; }
 
     /* Minimap */
     #minimap { position:absolute; bottom:10px; left:10px; z-index:500; width:110px; height:80px; border:1px solid #0d2030; border-radius:4px; overflow:hidden; background:#06090e; }
@@ -89,6 +96,31 @@
     .ach-name { font-size:10px; color:#4a7aaa; font-weight:700; }
     .ach-desc { font-size:8px; color:#1e3a5a; margin-top:2px; line-height:1.4; }
     .ach-card.unlocked .ach-desc { color:#4a8a6a; }
+
+    /* Stats panel */
+    #stats-panel { position:absolute; inset:0; background:rgba(6,9,20,0.97); z-index:700; display:none; flex-direction:column; }
+    #stats-panel.open { display:flex; }
+    #stats-header { display:flex; align-items:center; justify-content:space-between; padding:12px 16px; border-bottom:1px solid #0d1620; flex-shrink:0; }
+    #stats-body { flex:1; overflow-y:auto; padding:12px; }
+    .stats-section { margin-bottom:18px; }
+    .stats-section-title { font-size:8px; color:#1e3a5a; letter-spacing:0.2em; margin-bottom:8px; padding-bottom:4px; border-bottom:1px solid #0a1520; }
+    .stats-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+    .stats-card { background:#07101a; border:1px solid #0d1620; border-radius:6px; padding:10px 12px; }
+    .stats-card.wide { grid-column:1/-1; }
+    .stats-card .sc-val { font-size:20px; font-weight:700; color:#00ff8c; line-height:1.1; }
+    .stats-card .sc-val.blue { color:#4ac8ff; }
+    .stats-card .sc-val.purple { color:#aa4aff; }
+    .stats-card .sc-val.yellow { color:#ffcc44; }
+    .stats-card .sc-val.red { color:#ff6644; }
+    .stats-card .sc-lbl { font-size:8px; color:#1e3a5a; letter-spacing:0.12em; margin-top:2px; }
+    .stats-card .sc-sub { font-size:9px; color:#4a7aaa; margin-top:4px; }
+    .region-top-bar { height:3px; border-radius:2px; margin-top:6px; background:#0d1620; }
+    .region-top-fill { height:3px; border-radius:2px; }
+    .stats-divider { height:1px; background:#0a1520; margin:6px 0; }
+    #stats-region-list { display:flex; flex-direction:column; gap:4px; margin-top:6px; }
+    .stats-region-row { display:flex; align-items:center; justify-content:space-between; font-size:9px; color:#4a7aaa; padding:3px 0; border-bottom:1px solid #080f18; }
+    .stats-region-row .srr-name { color:#8ab4d4; }
+    .stats-region-row .srr-pct { color:#00ff8c; font-weight:700; }
 
     /* Achievement toast */
     #ach-toast { position:absolute; top:70px; left:50%; transform:translateX(-50%); z-index:800; background:rgba(0,40,20,0.97); border:1px solid #00ff8c; border-radius:6px; padding:8px 16px; text-align:center; display:none; pointer-events:none; white-space:nowrap; }
@@ -160,6 +192,7 @@
   <button class="btn" id="btn-track">⊙ Track</button>
   <button class="btn" id="btn-rotate" title="Toggle map rotation">⟳ Rotate</button>
   <button class="btn" id="btn-ach">🏆</button>
+  <button class="btn" id="btn-stats">📊 Stats</button>
   <button class="btn" id="btn-battery" title="Battery saver mode">🔋</button>
   <button class="btn" id="btn-share" title="Share progress">📤 Share</button>
   <div class="sep"></div>
@@ -199,6 +232,11 @@
       <div id="speed-val">0</div>
       <div id="speed-unit">KM/H</div>
     </div>
+    <div id="km-hud">
+      <div id="km-val">0.00</div>
+      <div id="km-unit">KM WALKED</div>
+      <div id="km-reset">⟳ reset</div>
+    </div>
     <div id="minimap"><canvas id="minimap-canvas"></canvas></div>
     <div id="ach-toast">
       <div class="at-icon" id="at-icon">🏆</div>
@@ -212,6 +250,16 @@
         <button onclick="document.getElementById('ach-panel').classList.remove('open')" style="background:none;border:none;color:#4a7aaa;cursor:pointer;font-size:18px">✕</button>
       </div>
       <div id="ach-list"></div>
+    </div>
+  </div>
+  <!-- Stats panel -->
+  <div id="stats-panel">
+    <div id="stats-header">
+      <div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:800;color:#fff">📊 Stats</div>
+      <button onclick="document.getElementById('stats-panel').classList.remove('open')" style="background:none;border:none;color:#4a7aaa;cursor:pointer;font-size:18px">✕</button>
+    </div>
+    <div id="stats-body">
+      <!-- filled by renderStats() -->
     </div>
   </div>
 </div>
@@ -407,12 +455,40 @@ function renderAchPanel() {
 }
 
 // ═══════════════════════════════════════════════════════
+// STATS PERSISTENCE
+// ═══════════════════════════════════════════════════════
+const STATS_KEY = "scraper_stats_v1";
+function saveStats() {
+  try {
+    localStorage.setItem(STATS_KEY, JSON.stringify({
+      topSpeed, totalSeconds, firstExplore, sessionsCount
+    }));
+  } catch(e) {}
+}
+function loadStats() {
+  try {
+    const raw = localStorage.getItem(STATS_KEY);
+    if (!raw) return;
+    const d = JSON.parse(raw);
+    if (d.topSpeed)      topSpeed      = d.topSpeed;
+    if (d.totalSeconds)  totalSeconds  = d.totalSeconds;
+    if (d.firstExplore)  firstExplore  = d.firstExplore;
+    if (d.sessionsCount) sessionsCount = d.sessionsCount;
+  } catch(e) {}
+}
+function clearStats() {
+  topSpeed=0; totalSeconds=0; firstExplore=null; sessionsCount=0;
+  try { localStorage.removeItem(STATS_KEY); } catch(e) {}
+}
+
+// ═══════════════════════════════════════════════════════
 // PERSISTENCE
 // ═══════════════════════════════════════════════════════
 const SAVE_KEY = "scraper_romania_v1";
 function saveProgress() {
   const data = {};
   REGIONS.forEach(r => { data[r.id] = [...exploredMap[r.id]]; });
+  data.__km = totalKm;
   try { localStorage.setItem(SAVE_KEY, JSON.stringify(data)); } catch(e) {}
 }
 function loadProgress() {
@@ -421,13 +497,15 @@ function loadProgress() {
     if (!raw) return;
     const data = JSON.parse(raw);
     REGIONS.forEach(r => { if (data[r.id]) exploredMap[r.id] = new Set(data[r.id]); });
+    if (data.__km) { totalKm = data.__km; updateKmHud(); }
   } catch(e) {}
 }
 function clearProgress() {
   REGIONS.forEach(r => { exploredMap[r.id] = new Set(); });
   unlockedAch.clear();
+  clearStats();
   try { localStorage.removeItem(SAVE_KEY); localStorage.removeItem("scraper_ach_v1"); } catch(e) {}
-  playerPos = null;
+  playerPos = null; totalKm = 0; updateKmHud();
   updateAll(); redrawFog(); renderAchPanel();
 }
 
@@ -446,6 +524,12 @@ let tileLayer     = null;
 let rotateMode    = false;
 let currentSpeed  = 0;
 let batterySaver  = false;
+let totalKm       = 0;   // cumulative distance walked
+let topSpeed      = 0;   // best km/h ever recorded
+let sessionStart  = null; // Date when tracking started
+let totalSeconds  = 0;   // cumulative tracked seconds
+let firstExplore  = null; // ISO date string of first tile revealed
+let sessionsCount = 0;   // total tracking sessions started
 
 const STYLES = {
   street:{ url:"https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",                                            attr:"© OpenStreetMap contributors" },
@@ -495,6 +579,10 @@ function revealAt(lat, lng) {
     },null);
     setActiveRegion(closest);
   }
+  if(!firstExplore && Object.values(exploredMap).some(s=>s.size>0)){
+    firstExplore = new Date().toISOString().slice(0,10);
+    saveStats();
+  }
   saveProgress();
   checkAchievements();
 }
@@ -507,6 +595,20 @@ function revealLine(lat1, lng1, lat2, lng2) {
     const t = i/steps;
     revealAt(lat1 + (lat2-lat1)*t, lng1 + (lng2-lng1)*t);
   }
+}
+
+// Haversine distance in km between two lat/lng points
+function haversineKm(lat1, lng1, lat2, lng2) {
+  const R = 6371;
+  const dLat = (lat2-lat1)*Math.PI/180;
+  const dLng = (lng2-lng1)*Math.PI/180;
+  const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+function updateKmHud() {
+  const el = document.getElementById("km-val");
+  if (!el) return;
+  el.textContent = totalKm >= 100 ? totalKm.toFixed(1) : totalKm.toFixed(2);
 }
 
 // ═══════════════════════════════════════════════════════
@@ -699,12 +801,145 @@ function setActiveRegion(r){
 function updateSpeed(mps) {
   currentSpeed = mps || 0;
   const kmh = Math.round(currentSpeed * 3.6);
+  if(kmh > topSpeed){ topSpeed = kmh; saveStats(); }
   const hud = document.getElementById("speed-hud");
   hud.style.display = tracking ? "block" : "none";
   document.getElementById("speed-val").textContent = kmh;
   // Color by speed
   const color = kmh < 10 ? "#00ff8c" : kmh < 60 ? "#ffcc00" : "#ff6644";
   document.getElementById("speed-val").style.color = color;
+}
+
+
+// ═══════════════════════════════════════════════════════
+// STATS PANEL
+// ═══════════════════════════════════════════════════════
+function fmtTime(secs) {
+  const h = Math.floor(secs/3600);
+  const m = Math.floor((secs%3600)/60);
+  const s = secs%60;
+  if(h>0) return `${h}h ${m}m`;
+  if(m>0) return `${m}m ${s}s`;
+  return `${s}s`;
+}
+function renderStats() {
+  const body = document.getElementById("stats-body");
+
+  // ── totals ──────────────────────────────────────────
+  const totTiles  = REGIONS.reduce((s,r)=>s+r.gridW*r.gridH, 0);
+  const expTiles  = REGIONS.reduce((s,r)=>s+exploredMap[r.id].size, 0);
+  const pctTotal  = (expTiles/totTiles*100).toFixed(2);
+  const doneCount = REGIONS.filter(r=>regionPct(r)>=100).length;
+  const achCount  = unlockedAch.size;
+
+  // ── live session time ────────────────────────────────
+  const liveSecs = sessionStart ? Math.floor((Date.now()-sessionStart)/1000) : 0;
+  const totalSec = totalSeconds + liveSecs;
+
+  // ── top 5 regions ────────────────────────────────────
+  const topRegions = [...REGIONS]
+    .map(r=>({ r, pct:regionPct(r) }))
+    .filter(x=>x.pct>0)
+    .sort((a,b)=>b.pct-a.pct)
+    .slice(0,5);
+
+  // ── most explored type ───────────────────────────────
+  const typeExp = {};
+  REGIONS.forEach(r=>{
+    typeExp[r.type] = (typeExp[r.type]||0) + exploredMap[r.id].size;
+  });
+  const topType = Object.entries(typeExp).sort((a,b)=>b[1]-a[1])[0];
+
+  // ── build HTML ───────────────────────────────────────
+  body.innerHTML = `
+    <div class="stats-section">
+      <div class="stats-section-title">EXPLORATION</div>
+      <div class="stats-grid">
+        <div class="stats-card">
+          <div class="sc-val">${pctTotal}%</div>
+          <div class="sc-lbl">ROMÂNIA EXPLORED</div>
+        </div>
+        <div class="stats-card">
+          <div class="sc-val">${expTiles.toLocaleString()}</div>
+          <div class="sc-lbl">TILES REVEALED</div>
+          <div class="sc-sub">of ${totTiles.toLocaleString()} total</div>
+        </div>
+        <div class="stats-card">
+          <div class="sc-val">${doneCount}</div>
+          <div class="sc-lbl">REGIONS COMPLETED</div>
+          <div class="sc-sub">of ${REGIONS.length} total</div>
+        </div>
+        <div class="stats-card">
+          <div class="sc-val yellow">${achCount}</div>
+          <div class="sc-lbl">ACHIEVEMENTS</div>
+          <div class="sc-sub">of 16 unlocked</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="stats-section">
+      <div class="stats-section-title">MOVEMENT</div>
+      <div class="stats-grid">
+        <div class="stats-card">
+          <div class="sc-val blue">${totalKm>=100?totalKm.toFixed(1):totalKm.toFixed(2)}</div>
+          <div class="sc-lbl">KM WALKED</div>
+        </div>
+        <div class="stats-card">
+          <div class="sc-val red">${topSpeed}</div>
+          <div class="sc-lbl">TOP SPEED (KM/H)</div>
+        </div>
+        <div class="stats-card">
+          <div class="sc-val purple">${fmtTime(totalSec)}</div>
+          <div class="sc-lbl">TIME TRACKED</div>
+        </div>
+        <div class="stats-card">
+          <div class="sc-val">${sessionsCount}</div>
+          <div class="sc-lbl">SESSIONS</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="stats-section">
+      <div class="stats-section-title">MILESTONES</div>
+      <div class="stats-grid">
+        <div class="stats-card">
+          <div class="sc-val" style="font-size:13px">${firstExplore || "—"}</div>
+          <div class="sc-lbl">FIRST EXPLORE</div>
+        </div>
+        <div class="stats-card">
+          <div class="sc-val" style="font-size:13px">${topType ? topType[0] : "—"}</div>
+          <div class="sc-lbl">FAVOURITE TYPE</div>
+          <div class="sc-sub">${topType ? topType[1].toLocaleString()+' tiles' : ''}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="stats-section">
+      <div class="stats-section-title">TOP 5 REGIONS</div>
+      ${topRegions.length ? `
+      <div id="stats-region-list">
+        ${topRegions.map((x,i)=>`
+          <div class="stats-region-row">
+            <span style="color:#1e3a5a;width:14px">${i+1}</span>
+            <span class="srr-name">${x.r.name}</span>
+            <span style="font-size:7px;color:#1e3a5a;flex:1;margin:0 6px">${x.r.type}</span>
+            <span class="srr-pct">${x.pct.toFixed(1)}%</span>
+          </div>
+          <div class="region-top-bar"><div class="region-top-fill" style="width:${Math.min(x.pct,100)}%;background:${BAR_COLORS[x.r.type]||'#00ff8c'}"></div></div>
+        `).join('')}
+      </div>` : '<div style="font-size:9px;color:#1e3a5a;padding:8px 0">No regions explored yet. Go outside! 🚶</div>'}
+    </div>
+
+    <div class="stats-section">
+      <div class="stats-section-title">COMING SOON</div>
+      <div class="stats-grid">
+        <div class="stats-card wide" style="border-style:dashed;opacity:0.5">
+          <div class="sc-val" style="font-size:13px;color:#1e3a5a">📦 Crates · 🏅 Leaderboard · 👥 Multiplayer</div>
+          <div class="sc-lbl">IN DEVELOPMENT</div>
+        </div>
+      </div>
+    </div>
+  `;
 }
 
 // ═══════════════════════════════════════════════════════
@@ -812,8 +1047,11 @@ document.getElementById("btn-track").addEventListener("click",()=>{
     if(!navigator.geolocation){showError("Geolocation not supported.");return;}
     watchId=navigator.geolocation.watchPosition(
       ({coords:{latitude:lat,longitude:lng,speed}})=>{
-        if(lastPlayerPos) revealLine(lastPlayerPos.lat,lastPlayerPos.lng,lat,lng);
-        else revealAt(lat,lng);
+        if(lastPlayerPos) {
+          revealLine(lastPlayerPos.lat,lastPlayerPos.lng,lat,lng);
+          totalKm += haversineKm(lastPlayerPos.lat,lastPlayerPos.lng,lat,lng);
+          updateKmHud();
+        } else revealAt(lat,lng);
         lastPlayerPos={lat,lng}; playerPos={lat,lng};
         updateSpeed(speed);
         map.panTo([lat,lng],{animate:true,duration:0.5});
@@ -823,11 +1061,13 @@ document.getElementById("btn-track").addEventListener("click",()=>{
       {enableHighAccuracy:!batterySaver, maximumAge:batterySaver?10000:0, timeout:10000}
     );
     requestWakeLock();
+    sessionStart = Date.now(); sessionsCount++;
     tracking=true; btn.textContent="⊙ Tracking…"; btn.classList.add("on");
     document.getElementById("speed-hud").style.display="block";
   } else {
     navigator.geolocation.clearWatch(watchId);
     releaseWakeLock();
+    if(sessionStart){ totalSeconds += Math.floor((Date.now()-sessionStart)/1000); sessionStart=null; saveStats(); }
     lastPlayerPos=null; tracking=false; btn.textContent="⊙ Track"; btn.classList.remove("on");
     document.getElementById("speed-hud").style.display="none";
   }
@@ -863,8 +1103,11 @@ document.getElementById("btn-battery").addEventListener("click",()=>{
     navigator.geolocation.clearWatch(watchId);
     watchId=navigator.geolocation.watchPosition(
       ({coords:{latitude:lat,longitude:lng,speed}})=>{
-        if(lastPlayerPos) revealLine(lastPlayerPos.lat,lastPlayerPos.lng,lat,lng);
-        else revealAt(lat,lng);
+        if(lastPlayerPos) {
+          revealLine(lastPlayerPos.lat,lastPlayerPos.lng,lat,lng);
+          totalKm += haversineKm(lastPlayerPos.lat,lastPlayerPos.lng,lat,lng);
+          updateKmHud();
+        } else revealAt(lat,lng);
         lastPlayerPos={lat,lng}; playerPos={lat,lng};
         updateSpeed(speed);
         map.panTo([lat,lng],{animate:true,duration:0.5});
@@ -941,8 +1184,17 @@ updateOnlineStatus();
 // Service Worker
 if("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(()=>{});
 
+// Stats button
+document.getElementById("btn-stats").addEventListener("click",()=>{
+  renderStats();
+  document.getElementById("stats-panel").classList.add("open");
+});
+
+// KM reset button
+document.getElementById("km-reset").addEventListener("click",()=>{ if(confirm("Reset km counter?")){ totalKm=0; saveProgress(); updateKmHud(); } });
+
 // Boot
-loadProgress(); loadAchievements();
+loadProgress(); loadAchievements(); loadStats();
 redrawFog(); updateAll(); renderAchPanel(); drawMinimap();
 window.addEventListener("resize",()=>{ redrawFog(); drawMinimap(); });
 </script>
