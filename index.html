@@ -106,7 +106,8 @@
     #btn-sidebar { background:#0d1a28; color:#4a7aaa; border:1px solid #1a3050; padding:4px 8px; }
     #btn-rotate { background:#0d1a28; color:#4a7aaa; border:1px solid #1a3050; padding:4px 8px; }
     #btn-rotate.on { background:#1a1a0d; color:#ffcc00; border-color:#aa8800; }
-    #btn-ach { background:#0d1a28; color:#4a7aaa; border:1px solid #1a3050; padding:4px 8px; }
+    #btn-battery { background:#0d1a28; color:#4a7aaa; border:1px solid #1a3050; padding:4px 8px; }
+    #btn-battery.on { background:#1a1200; color:#ffaa00; border-color:#aa7000; }
     .stat-val { font-size:16px; font-weight:700; line-height:1; }
     .stat-lbl { font-size:7px; color:#1e3a5a; letter-spacing:0.12em; }
     .divider { width:1px; height:22px; background:#0d1620; flex-shrink:0; }
@@ -158,6 +159,7 @@
   <button class="btn" id="btn-track">⊙ Track</button>
   <button class="btn" id="btn-rotate" title="Toggle map rotation">⟳ Rotate</button>
   <button class="btn" id="btn-ach">🏆</button>
+  <button class="btn" id="btn-battery" title="Battery saver mode">🔋</button>
   <div class="sep"></div>
   <span class="map-lbl">MAP</span>
   <button class="btn style-btn on" data-style="street">Street</button>
@@ -177,7 +179,10 @@
 
 <div id="main">
   <div id="sidebar">
-    <div class="sidebar-header">REGIONS · TAP TO JUMP</div>
+    <div class="sidebar-header" style="display:flex;align-items:center;justify-content:space-between">
+      <span>REGIONS · TAP TO JUMP</span>
+      <button onclick="document.getElementById('sidebar').classList.remove('open')" style="background:none;border:none;color:#1e3a5a;cursor:pointer;font-size:16px;padding:0 2px;line-height:1">✕</button>
+    </div>
     <div id="region-list"></div>
   </div>
   <div id="map-wrap">
@@ -437,6 +442,7 @@ let watchId      = null;
 let tileLayer    = null;
 let rotateMode   = false;
 let currentSpeed = 0;
+let batterySaver = false;
 
 const STYLES = {
   street:{ url:"https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",                                            attr:"© OpenStreetMap contributors" },
@@ -549,6 +555,23 @@ function redrawFog() {
   });
 
   ctx.globalCompositeOperation="source-over";
+
+  // Black overlay for areas outside ALL regions (uncompletable)
+  // Sample a grid of screen points; if not in any region, darken it
+  const step = 40;
+  ctx.fillStyle = "rgba(0,0,0,0.45)";
+  for(let px=0; px<sz.x; px+=step) {
+    for(let py=0; py<sz.y; py+=step) {
+      const ll = map.containerPointToLatLng([px+step/2, py+step/2]);
+      const inAny = REGIONS.some(r => {
+        const {tx,ty} = latLngToTile(r, ll.lat, ll.lng);
+        return inBounds(r, tx, ty);
+      });
+      if(!inAny) {
+        ctx.fillRect(px, py, step, step);
+      }
+    }
+  }
 
   // Player dot
   if(playerPos){
@@ -782,7 +805,7 @@ document.getElementById("btn-track").addEventListener("click",()=>{
         updateAll(); redrawFog(); drawMinimap();
       },
       ()=>showError("GPS signal lost."),
-      {enableHighAccuracy:true,maximumAge:1000}
+      {enableHighAccuracy:!batterySaver, maximumAge:batterySaver?10000:1000}
     );
     requestWakeLock();
     tracking=true; btn.textContent="⊙ Tracking…"; btn.classList.add("on");
@@ -815,7 +838,26 @@ document.getElementById("btn-rotate").addEventListener("click",()=>{
   }
 });
 
-document.getElementById("btn-ach").addEventListener("click",()=>{
+document.getElementById("btn-battery").addEventListener("click",()=>{
+  const btn=document.getElementById("btn-battery");
+  batterySaver=!batterySaver;
+  btn.classList.toggle("on",batterySaver);
+  showError(batterySaver ? "🔋 Battery saver ON — GPS every 10s, low accuracy" : "🔋 Battery saver OFF — full GPS");
+  // Restart tracking with new settings if active
+  if(tracking){
+    navigator.geolocation.clearWatch(watchId);
+    watchId=navigator.geolocation.watchPosition(
+      ({coords:{latitude:lat,longitude:lng,speed}})=>{
+        playerPos={lat,lng}; revealAt(lat,lng);
+        updateSpeed(speed);
+        map.panTo([lat,lng],{animate:true,duration:0.5});
+        updateAll(); redrawFog(); drawMinimap();
+      },
+      ()=>showError("GPS signal lost."),
+      {enableHighAccuracy:!batterySaver, maximumAge:batterySaver?10000:1000}
+    );
+  }
+});
   renderAchPanel();
   document.getElementById("ach-panel").classList.add("open");
 });
