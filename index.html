@@ -32,7 +32,12 @@
     .search-result-item:hover { background:#0a1825; }
     .search-result-item .sr-type { font-size:8px; color:#1e3a5a; }
 
-    #toolbar { display:flex; align-items:center; gap:5px; padding:5px 10px; background:#08101a; border-bottom:1px solid #0d1620; z-index:500; flex-shrink:0; flex-wrap:wrap; }
+    #toolbar { display:flex; flex-direction:column; background:#08101a; border-bottom:1px solid #0d1620; z-index:500; flex-shrink:0; }
+    .tb-row { display:flex; align-items:center; gap:5px; padding:4px 10px; flex-wrap:nowrap; overflow-x:auto; }
+    .tb-row:first-child { border-bottom:1px solid #0a1520; }
+    .tb-row::-webkit-scrollbar { display:none; }
+    .tb-group { display:flex; align-items:center; gap:4px; }
+    .tb-sep { width:1px; height:16px; background:#0d1620; flex-shrink:0; margin:0 3px; }
     #error-bar { display:none; align-items:center; justify-content:space-between; padding:5px 14px; background:#180808; border-bottom:1px solid #2a1010; font-size:10px; color:#ff7070; z-index:500; flex-shrink:0; }
     #main { flex:1; display:flex; overflow:hidden; min-height:0; }
 
@@ -136,15 +141,12 @@
     #btn-track { background:#0d1a28; color:#4a7aaa; border:1px solid #1a3050; }
     #btn-track.on { background:#001a3a; color:#4af; border-color:#0af; }
     #btn-sidebar { background:#0d1a28; color:#4a7aaa; border:1px solid #1a3050; padding:4px 8px; }
-    #btn-rotate { background:#0d1a28; color:#4a7aaa; border:1px solid #1a3050; padding:4px 8px; }
-    #btn-rotate.on { background:#1a1a0d; color:#ffcc00; border-color:#aa8800; }
     #btn-battery { background:#0d1a28; color:#4a7aaa; border:1px solid #1a3050; padding:4px 8px; }
     #btn-battery.on { background:#1a1200; color:#ffaa00; border-color:#aa7000; }
     #btn-share { background:#0d1a28; color:#4a7aaa; border:1px solid #1a3050; padding:4px 8px; }
     .stat-val { font-size:16px; font-weight:700; line-height:1; }
     .stat-lbl { font-size:7px; color:#1e3a5a; letter-spacing:0.12em; }
     .divider { width:1px; height:22px; background:#0d1620; flex-shrink:0; }
-    .sep { width:1px; height:14px; background:#0d1620; margin:0 1px; flex-shrink:0; }
     .map-lbl { font-size:8px; color:#1e3a5a; letter-spacing:0.14em; }
     @keyframes spin { to { transform:rotate(360deg); } }
     .spin { display:inline-block; animation:spin 1s linear infinite; }
@@ -187,24 +189,35 @@
 </div>
 
 <div id="toolbar">
-  <button class="btn" id="btn-sidebar">☰</button>
-  <button class="btn" id="btn-locate">⌖ Locate</button>
-  <button class="btn" id="btn-track">⊙ Track</button>
-  <button class="btn" id="btn-rotate" title="Toggle map rotation">⟳ Rotate</button>
-  <button class="btn" id="btn-ach">🏆</button>
-  <button class="btn" id="btn-stats">📊 Stats</button>
-  <button class="btn" id="btn-battery" title="Battery saver mode">🔋</button>
-  <button class="btn" id="btn-share" title="Share progress">📤 Share</button>
-  <div class="sep"></div>
-  <span class="map-lbl">MAP</span>
-  <button class="btn style-btn on" data-style="street">Street</button>
-  <button class="btn style-btn"    data-style="dark">Dark</button>
-  <button class="btn style-btn"    data-style="sat">Sat</button>
-  <button class="btn style-btn"    data-style="topo">Topo</button>
-  <button class="btn" id="btn-reset"  style="margin-left:auto;background:#1a0808;color:#ff7070;border:1px solid #3a1010;font-size:9px">⟳ Reset</button>
-  <button class="btn" id="btn-export" style="background:#0d1a28;color:#4a7aaa;border:1px solid #1a3050;font-size:9px">↑ Export</button>
-  <button class="btn" id="btn-import" style="background:#0d1a28;color:#4a7aaa;border:1px solid #1a3050;font-size:9px">↓ Import</button>
-  <input type="file" id="import-input" accept=".json" style="display:none" />
+  <!-- Row 1: Navigation & Map style -->
+  <div class="tb-row">
+    <div class="tb-group">
+      <button class="btn" id="btn-sidebar">☰</button>
+      <button class="btn" id="btn-locate">⌖ Locate</button>
+      <button class="btn" id="btn-track">⊙ Track</button>
+      <button class="btn" id="btn-battery" title="Battery saver mode">🔋</button>
+    </div>
+    <div class="tb-sep"></div>
+    <div class="tb-group">
+      <span class="map-lbl">MAP</span>
+      <button class="btn style-btn on" data-style="street">Street</button>
+      <button class="btn style-btn"    data-style="dark">Dark</button>
+      <button class="btn style-btn"    data-style="sat">Sat</button>
+      <button class="btn style-btn"    data-style="topo">Topo</button>
+    </div>
+  </div>
+  <!-- Row 2: Data & Actions -->
+  <div class="tb-row">
+    <div class="tb-group">
+      <button class="btn" id="btn-ach">🏆 Achievements</button>
+      <button class="btn" id="btn-stats">📊 Stats</button>
+      <button class="btn" id="btn-share" title="Share progress">📤 Share</button>
+    </div>
+    <input type="file" id="import-input" accept=".json" style="display:none" />
+    <button id="btn-export" style="display:none"></button>
+    <button id="btn-import" style="display:none"></button>
+    <button id="btn-reset"  style="display:none"></button>
+  </div>
 </div>
 
 <div id="error-bar">
@@ -931,6 +944,26 @@ function renderStats() {
     </div>
 
     <div class="stats-section">
+      <div class="stats-section-title">DATA</div>
+      <div class="stats-grid">
+        <div class="stats-card" style="cursor:pointer" onclick="document.getElementById('btn-export').click()">
+          <div class="sc-val" style="font-size:18px;color:#4a7aaa">↑</div>
+          <div class="sc-lbl">EXPORT SAVE</div>
+          <div class="sc-sub">Download progress as JSON</div>
+        </div>
+        <div class="stats-card" style="cursor:pointer" onclick="document.getElementById('import-input').click()">
+          <div class="sc-val" style="font-size:18px;color:#4a7aaa">↓</div>
+          <div class="sc-lbl">IMPORT SAVE</div>
+          <div class="sc-sub">Load progress from JSON</div>
+        </div>
+        <div class="stats-card wide" style="cursor:pointer;border-color:#3a1010" onclick="if(confirm('Reset ALL progress? This cannot be undone.')){ clearProgress(); document.getElementById('stats-panel').classList.remove('open'); }">
+          <div class="sc-val" style="font-size:15px;color:#ff7070">⟳ Reset All Progress</div>
+          <div class="sc-lbl" style="color:#3a1010;margin-top:4px">DANGER ZONE · CANNOT BE UNDONE</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="stats-section">
       <div class="stats-section-title">COMING SOON</div>
       <div class="stats-grid">
         <div class="stats-card wide" style="border-style:dashed;opacity:0.5">
@@ -1073,26 +1106,6 @@ document.getElementById("btn-track").addEventListener("click",()=>{
   }
 });
 
-document.getElementById("btn-rotate").addEventListener("click",()=>{
-  const btn=document.getElementById("btn-rotate");
-  rotateMode=!rotateMode;
-  btn.classList.toggle("on",rotateMode);
-  if(rotateMode){
-    if(typeof DeviceOrientationEvent!=="undefined" && typeof DeviceOrientationEvent.requestPermission==="function"){
-      DeviceOrientationEvent.requestPermission().then(s=>{
-        if(s==="granted") window.addEventListener("deviceorientation",handleOrientation);
-        else showError("Compass permission denied.");
-      });
-    } else {
-      window.addEventListener("deviceorientation",handleOrientation);
-    }
-  } else {
-    window.removeEventListener("deviceorientation",handleOrientation);
-    map.setBearing(0);
-    redrawFog();
-  }
-});
-
 document.getElementById("btn-battery").addEventListener("click",()=>{
   const btn=document.getElementById("btn-battery");
   batterySaver=!batterySaver;
@@ -1182,7 +1195,12 @@ window.addEventListener("offline",updateOnlineStatus);
 updateOnlineStatus();
 
 // Service Worker
-if("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(()=>{});
+if ("serviceWorker" in navigator) {
+  const swScope = new URL("./", location.href).pathname;
+  navigator.serviceWorker.register("./sw.js", { scope: swScope })
+    .then(reg => console.log("SW registered, scope:", reg.scope))
+    .catch(err => console.warn("SW failed:", err));
+}
 
 // Stats button
 document.getElementById("btn-stats").addEventListener("click",()=>{
