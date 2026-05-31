@@ -260,7 +260,10 @@
     <div id="ach-panel">
       <div id="ach-header">
         <div style="font-family:'Syne',sans-serif;font-size:15px;font-weight:800;color:#fff">🏆 Achievements</div>
-        <button onclick="document.getElementById('ach-panel').classList.remove('open')" style="background:none;border:none;color:#4a7aaa;cursor:pointer;font-size:18px">✕</button>
+        <div style="display:flex;align-items:center;gap:8px">
+          <button onclick="checkAchievements();renderAchPanel();" style="background:#003d20;border:1px solid #00aa55;color:#00ff8c;font-family:'Space Mono',monospace;font-size:9px;padding:3px 8px;border-radius:4px;cursor:pointer;letter-spacing:0.05em">⟳ Recheck</button>
+          <button onclick="document.getElementById('ach-panel').classList.remove('open')" style="background:none;border:none;color:#4a7aaa;cursor:pointer;font-size:18px">✕</button>
+        </div>
       </div>
       <div id="ach-list"></div>
     </div>
@@ -353,7 +356,7 @@ const REGIONS = [
   { id:"ceahlau",     name:"Ceahlău",             type:"NATURĂ",   center:[46.9700,25.9500], zoom:12, tileDeg:0.006,  gridW:50, gridH:50 },
   { id:"cheile_bic",  name:"Cheile Bicazului",    type:"NATURĂ",   center:[46.7950,25.8150], zoom:13, tileDeg:0.004,  gridW:35, gridH:35 },
   { id:"sinaia",      name:"Sinaia",              type:"NATURĂ",   center:[45.3574,25.5455], zoom:13, tileDeg:0.003,  gridW:40, gridH:45 },
-  { id:"zaga_zaga",   name:"Zaga Zaga",           type:"NATURĂ",   center:[45.7200,27.5500], zoom:13, tileDeg:0.004,  gridW:40, gridH:40 },
+  { id:"zaga_zaga",   name:"Zaga Zaga",           type:"NATURĂ",   center:[45.7700,27.3400], zoom:14, tileDeg:0.002,  gridW:25, gridH:25 },
   { id:"siret_delta", name:"Delta Siretului",     type:"NATURĂ",   center:[45.7000,27.5000], zoom:11, tileDeg:0.012,  gridW:50, gridH:45 },
   { id:"lacul_sf",    name:"Lacul Sfânta Ana",    type:"NATURĂ",   center:[46.1083,25.8750], zoom:14, tileDeg:0.002,  gridW:30, gridH:30 },
   { id:"bicaz",       name:"Lacul Bicaz",         type:"NATURĂ",   center:[46.8833,25.8833], zoom:12, tileDeg:0.006,  gridW:45, gridH:40 },
